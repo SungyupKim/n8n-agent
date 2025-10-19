@@ -3,13 +3,12 @@
 Simple test with minimal data
 """
 import requests
+from env_config import get_auth_credentials, get_webhook_url
 
 def simple_test():
-    webhook_url = "https://sungyup.app.n8n.cloud/webhook/ddf4ea5b-94fc-4fbf-b856-95d39a04eb59/chat"
-    
-    # Basic Auth credentials
-    username = "sungyupv@gmail.com"
-    password = "159753/*sk"
+    # Get configuration from environment variables
+    webhook_url = get_webhook_url()
+    username, password = get_auth_credentials()
     
     print("Testing with minimal GET request...")
     try:

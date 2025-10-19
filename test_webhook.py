@@ -5,14 +5,12 @@ Test script for n8n chat webhook
 import requests
 import json
 import sys
-import base64
+from env_config import get_auth_credentials, get_webhook_url
 
 def test_webhook():
-    webhook_url = "https://sungyup.app.n8n.cloud/webhook/ddf4ea5b-94fc-4fbf-b856-95d39a04eb59/chat"
-    
-    # Basic Auth credentials
-    username = "sungyupv@gmail.com"
-    password = "159753/*sk"
+    # Get configuration from environment variables
+    webhook_url = get_webhook_url()
+    username, password = get_auth_credentials()
     
     # Test data - you can modify this based on what your webhook expects
     test_data = {
