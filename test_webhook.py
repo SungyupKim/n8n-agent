@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
-Test script for n8n chat webhook
+Test script for n8n chat webhook with streaming support
 """
 import requests
 import json
 import sys
+import argparse
 from env_config import get_auth_credentials, get_webhook_url
+from streaming_webhook import StreamingWebhookHandler
+from stream_parser import N8nStreamParser
 
 def test_webhook():
     # Get configuration from environment variables
@@ -15,7 +18,7 @@ def test_webhook():
     # Test data - you can modify this based on what your webhook expects
     test_data = {
         "sessionId": "test-session-12345",
-        "chatInput": "Hello from test script!",
+        "chatInput": "test데이터베이스의 테이블 목록 알려줘",
         "message": "Hello from test script!",
         "user": "test_user",
         "timestamp": "2024-01-01T00:00:00Z"
@@ -66,5 +69,91 @@ def test_webhook():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 
+def test_streaming_webhook():
+    """Test streaming webhook functionality"""
+    webhook_url = get_webhook_url()
+    username, password = get_auth_credentials()
+    
+    # Create streaming handler
+    handler = StreamingWebhookHandler(webhook_url, username, password)
+    
+    # Test data
+    test_data = {
+        "sessionId": "streaming-test-12345",
+        "chatInput": "데이터베이스의 테이블 목록을 알려주세요",
+        "message": "Hello from streaming test!",
+        "user": "streaming_test_user",
+        "timestamp": "2024-01-01T00:00:00Z"
+    }
+    
+    print("🧪 Testing Streaming Webhook")
+    print("=" * 60)
+    
+    # Process the stream
+    try:
+        complete_response = handler.process_stream(test_data)
+        print(f"\n🎉 Streaming test completed!")
+        print(f"📝 Complete response: {complete_response}")
+        return complete_response
+    except Exception as e:
+        print(f"\n❌ Streaming test failed: {e}")
+        return None
+
+
+def test_with_parser():
+    """Test webhook with stream parser"""
+    webhook_url = get_webhook_url()
+    username, password = get_auth_credentials()
+    
+    handler = StreamingWebhookHandler(webhook_url, username, password)
+    parser = N8nStreamParser()
+    
+    test_data = {
+        "sessionId": "parser-test-12345",
+        "chatInput": "간단한 인사말을 해주세요",
+        "user": "parser_test_user"
+    }
+    
+    print("🔍 Testing with Stream Parser")
+    print("=" * 60)
+    
+    def on_chunk(chunk, content):
+        # Parse each chunk
+        parsed_chunk = parser.parse_line(json.dumps(chunk))
+        if parsed_chunk:
+            print(f"📦 Parsed: {parsed_chunk.type} - {parsed_chunk.content}")
+    
+    def on_complete(content, metadata):
+        print(f"\n📊 Stream Analysis:")
+        stats = parser.get_stream_stats()
+        print(f"   - Total chunks: {stats['total_chunks']}")
+        print(f"   - Content chunks: {stats['content_chunks']}")
+        print(f"   - Complete content: '{parser.get_complete_content()}'")
+    
+    try:
+        handler.process_stream(test_data, on_chunk=on_chunk, on_complete=on_complete)
+        print("\n✅ Parser test completed!")
+    except Exception as e:
+        print(f"\n❌ Parser test failed: {e}")
+
+
+def main():
+    """Main function with command line arguments"""
+    parser = argparse.ArgumentParser(description='Test n8n webhook with streaming support')
+    parser.add_argument('--mode', choices=['basic', 'streaming', 'parser'], 
+                       default='streaming', help='Test mode to run')
+    parser.add_argument('--input', type=str, 
+                       help='Custom input message for testing')
+    
+    args = parser.parse_args()
+    
+    if args.mode == 'basic':
+        test_webhook()
+    elif args.mode == 'streaming':
+        test_streaming_webhook()
+    elif args.mode == 'parser':
+        test_with_parser()
+
+
 if __name__ == "__main__":
-    test_webhook()
+    main()
